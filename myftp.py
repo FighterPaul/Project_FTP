@@ -10,14 +10,12 @@ data_socket_status = False
 
 
 
-
 def send_recv_print_cmd(cmd: str):
     client_command_socket.send(cmd.encode())
     response = client_command_socket.recv(buff_size).decode()
     print(response, end='')
+
     return response
-
-
 
 
 while True:
@@ -30,7 +28,7 @@ while True:
     if command == "quit":
         if connect_status == True:
             resp = send_recv_print_cmd("QUIT\r\n")
-            if resp == "221 Closing session.\r\n":
+            if resp[0:3] == "221":
                 client_command_socket.close()
                 connect_status = False
                 current_ftp_host = ""
@@ -40,15 +38,21 @@ while True:
 
 
     elif command == "ascii":
-        send_recv_print_cmd("TYPE A\r\n")
+        if connect_status == True:
+            send_recv_print_cmd("TYPE A\r\n")
+        else:
+            print("Not connected.")
     
     elif command == "binary":
-        send_recv_print_cmd("TYPE I\r\n")
+        if connect_status == True:
+            send_recv_print_cmd("TYPE I\r\n")
+        else:
+            print("Not connected.")
 
     elif command == "bye":
         if connect_status == True:
             resp = send_recv_print_cmd("QUIT\r\n")
-            if resp == "221 Closing session.\r\n":
+            if resp[0:3] == "221":
                 client_command_socket.close()
                 connect_status = False
                 current_ftp_host = ""
@@ -88,7 +92,7 @@ while True:
     elif command == "disconnect":    #close session and return to FTP
         if connect_status == True:
             resp = send_recv_print_cmd("QUIT\r\n")
-            if resp == "221 Closing session.\r\n":
+            if resp[0:3] == "221":
                 client_command_socket.close()
                 connect_status = False
                 current_ftp_host = ""
@@ -108,8 +112,6 @@ while True:
             try:
                 server_command_port = int(user_input[2])
             except IndexError:
-                server_command_port = 21
-            else:
                 server_command_port = 21
 
             try:
@@ -151,9 +153,6 @@ while True:
                 elif resp[0:3] == "501":    # 501 User name not specified
                     print("Login failed.") 
 
-                    
-
-
 
     elif command == "user":
         if connect_status == True:
@@ -164,28 +163,28 @@ while True:
                 username = user_input[1]
             except IndexError:
                 username = input("Username ")
-                if username == "\n":
-                    print("Usage: User username [password] [account]")
+                if username == "":
+                    print("Usage: user username [password] [account]")
                     continue
             user_resp = send_recv_print_cmd(f"USER {username}\r\n")
 
-            if user_resp == "331 Password required for 'anonymous'.\r\n":
+            if user_resp[0:3] == "331":
                 try:
                     password = user_input[2]
                 except IndexError:
                     password = getpass()
 
                 pass_resp = send_recv_print_cmd(f"PASS {password}\r\n")
+                if pass_resp[0:3] == "530":
+                    print("Login failed.")
             
-            elif user_resp == "501 Disconnect first to re-login.\r\n":
+            elif user_resp[0:3] == "501":
                 pass
-                
-
+            elif user_resp[0:3] == "530":
+                print("Login failed.")
 
         else:
             print("Not connected.")
-
-
 
 
 
@@ -236,7 +235,7 @@ while True:
                 except IndexError:                       # case user didn't type [local file]
                     print(data_income, end="")                              #print data
                     
-                print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n') #print statistic
+                print(cmd_rep_2, end=f'ftp: {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n') #print statistic
 
 
 
@@ -277,7 +276,7 @@ while True:
                     data_income_lenght = len(data_income)
                     connection_socket.close()
                     cmd_rep_2 = client_command_socket.recv(2047).decode()
-                    print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
+                    print(cmd_rep_2, end=f'ftp: {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
 
                     try:                                # case user type [local file]
                         filename = user_input[2]
@@ -339,7 +338,7 @@ while True:
                 connection_socket.close()
 
                 cmd_rep_2 = client_command_socket.recv(2047).decode()
-                print(cmd_rep_2, end=f'ftp> {data_export_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
+                print(cmd_rep_2, end=f'ftp: {data_export_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
 
 
     elif command == "rename":
@@ -362,6 +361,10 @@ while True:
 
     elif command == "pwd":
         send_recv_print_cmd("XPWD\r\n")
+
+
+    else:
+        print("Invalid command.")
 
 
 
