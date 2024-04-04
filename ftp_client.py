@@ -2,7 +2,10 @@ from socket import *
 from getpass import *
 current_ip_address = "192.168.1.54"
 buff_size = 2047
+
 connect_status = False
+current_ftp_host = ""
+
 data_socket_status = False      
 
 
@@ -29,6 +32,8 @@ while True:
             resp = send_recv_print_cmd("QUIT\r\n")
             if resp == "221 Closing session.\r\n":
                 client_command_socket.close()
+                connect_status = False
+                current_ftp_host = ""
         else:
             pass
         break
@@ -45,6 +50,8 @@ while True:
             resp = send_recv_print_cmd("QUIT\r\n")
             if resp == "221 Closing session.\r\n":
                 client_command_socket.close()
+                connect_status = False
+                current_ftp_host = ""
         else:
             pass
         break
@@ -61,9 +68,10 @@ while True:
     elif command == "close":        #close session and return to FTP
         if connect_status == True:
             resp = send_recv_print_cmd("QUIT\r\n")
-            if resp == "221 Closing session.\r\n":
+            if resp[0:3] == "221":                  # 221 goodbye || 221 closing session
                 client_command_socket.close()
-                pass
+                connect_status = False 
+                current_ftp_host = ""
         else:
             print("Not connected.")
         
@@ -76,49 +84,99 @@ while True:
             resp = send_recv_print_cmd("QUIT\r\n")
             if resp == "221 Closing session.\r\n":
                 client_command_socket.close()
-                pass
+                connect_status = False
+                current_ftp_host = ""
         else:
             print("Not connected.")
         
 
 
     elif command == "open":     # open [ip] [port]
-        #create tcp socket
-        client_command_socket = socket(AF_INET, SOCK_STREAM)
-        #connect to ftp server port 21
-        try:
-            server_command_port = int(user_input[2])
-        except IndexError:
-            server_command_port = 21
-        else:
-            server_command_port = 21
-
-        try:
-            client_command_socket.connect((user_input[1], server_command_port))
-        except gaierror:
-            print(f"Unknow host {user_input[1]}.")
+        if connect_status == True:
+            print(f"Already connected to {current_ftp_host}, use disconnect first.")
             continue
+        else:
+            #create tcp socket
+            client_command_socket = socket(AF_INET, SOCK_STREAM)
+            #connect to ftp server port 21
+            try:
+                server_command_port = int(user_input[2])
+            except IndexError:
+                server_command_port = 21
+            else:
+                server_command_port = 21
 
-        connection_response_message = client_command_socket.recv(2047).decode()
-        print(connection_response_message, end='')
+            try:
+                client_command_socket.connect((user_input[1], server_command_port))
+            except gaierror:
+                print(f"Unknow host {user_input[1]}.")
+                continue
+            except OSError:
+                print("> ftp: connect :Connection refused")
+                continue
 
-        # if connectiob is established -> OPTS UTF8 ON 
-        if connection_response_message.split(" ")[0] == "220":
-            send_recv_print_cmd("OPTS UTF8 ON\r\n")
+            connection_response_message = client_command_socket.recv(2047).decode()
+            if connection_response_message[0:3] == "220":
+                print(f"Connected to {user_input[1]}.")
+            print(connection_response_message, end='')
+            connect_status = True
+            current_ftp_host = user_input[1]
 
-        # if connectiob is established -> LOGIN 
-        if connection_response_message.split(" ")[0] == "220":
-            username = input(f"User ({user_input[1]}:(none)): ")
-            resp = send_recv_print_cmd(f"USER {username}\r\n")
+            # if connectiob is established -> OPTS UTF8 ON 
+            if connection_response_message[0:3] == "220":
+                send_recv_print_cmd("OPTS UTF8 ON\r\n")
 
-        if resp.split(" ")[0] == "331":     # 331 password required
-            password = getpass()
-            resp = send_recv_print_cmd(f"PASS {password}\r\n")
+            # if connectiob is established -> LOGIN 
+            if connection_response_message[0:3] == "220":
+                username = input(f"User ({user_input[1]}:(none)): ")
+                resp = send_recv_print_cmd(f"USER {username}\r\n")
 
-            if resp.split(' ')[0] == "230":     # LOGIN SUCCESS
-                connect_status = True
-            elif resp.split(' ')[0] == "530":    # 530 Authentication rejected
-                print("Login failed.")
+                if resp[0:3] == "331":     # 331 password required
+                    password = getpass()
+                    resp = send_recv_print_cmd(f"PASS {password}\r\n")
+
+                    if resp[0:3] == "230":     # LOGIN SUCCESS
+                        pass
+                    elif resp[0:3] == "530":    # 530 Authentication rejected 
+                        print("Login failed.") 
+                        
+                elif resp[0:3] == "501":    # 501 User name not specified
+                    print("Login failed.") 
+
+                    
+
+
+
+    elif command == "user":
+        if connect_status == True:
+            username = ''
+            password = ''
+            accout = ''
+            try:
+                username = user_input[1]
+            except IndexError:
+                username = input("Username ")
+                if username == "\n":
+                    print("Usage: User username [password] [account]")
+                    continue
+            user_resp = send_recv_print_cmd(f"USER {username}\r\n")
+
+            if user_resp == "331 Password required for 'anonymous'.\r\n":
+                try:
+                    password = user_input[2]
+                except IndexError:
+                    password = getpass()
+
+                pass_resp = send_recv_print_cmd(f"PASS {password}\r\n")
+            
+            elif user_resp == "501 Disconnect first to re-login.\r\n":
+                pass
+                
+
+
+        else:
+            print("Not connected.")
+
 
 
 
@@ -212,10 +270,10 @@ while True:
                     cmd_rep_2 = client_command_socket.recv(2047).decode()
                     print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
 
-                    try:
+                    try:                                # case user type [local file]
                         filename = user_input[2]
                     except IndexError:
-                        filename = user_input[1]
+                        filename = user_input[1]        # case user didn't type [local file]
                     f = open(filename, "w", newline='')
                     f.write(data_income)
                     f.close()
