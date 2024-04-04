@@ -149,7 +149,12 @@ while True:
 
 
             if data_socket_status == True:      # if after create data socket
-                client_command_socket.send("NLST\r\n".encode())
+                try:
+                    input_path = user_input[1]
+                    client_command_socket.send(f"NLST {input_path}\r\n".encode())
+                except IndexError:
+                    client_command_socket.send("NLST\r\n".encode())
+                
                 cmd_rep = client_command_socket.recv(2047).decode()
                 print(cmd_rep, end='')
                 data_income = connection_socket.recv(2047).decode()
@@ -159,9 +164,6 @@ while True:
                 print(data_income, end="")
                 print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
 
-                
-
-                
 
 
         else:
