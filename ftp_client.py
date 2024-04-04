@@ -1,6 +1,6 @@
 from socket import *
 from getpass import *
-current_ip_address = "192.168.1.54"
+current_ip_address = ""
 buff_size = 2047
 
 connect_status = False
@@ -114,6 +114,8 @@ while True:
 
             try:
                 client_command_socket.connect((user_input[1], server_command_port))
+                command_socket_info = client_command_socket.getsockname()
+                current_ip_address = command_socket_info[0]
             except gaierror:
                 print(f"Unknow host {user_input[1]}.")
                 continue
@@ -257,7 +259,6 @@ while True:
             port_command = f"PORT {fragment_current_ip[0]},{fragment_current_ip[1]},{fragment_current_ip[2]},{fragment_current_ip[3]},{client_data_socket_port // 256},{client_data_socket_port % 256}\r\n"
             
             resp = send_recv_print_cmd(port_command)                # send data socket port to server
-            connection_socket, ser_addr  = client_data_socket.accept()      # wait 3 way hand shake from server
 
 
 
@@ -268,6 +269,7 @@ while True:
 
             if data_socket_status == True:      # if after create data socket
                 client_command_socket.send(f"RETR {user_input[1]}\r\n".encode())
+                connection_socket, ser_addr  = client_data_socket.accept()      # wait 3 way hand shake from server
                 cmd_rep = client_command_socket.recv(2047).decode()
                 print(cmd_rep, end='')
                 if cmd_rep != "550 No such file.\r\n":
@@ -324,19 +326,20 @@ while True:
             remote_file = user_input[1]
         client_command_socket.send(f"STOR {remote_file}\r\n".encode())          # send command STOR 
         stor_rep = client_command_socket.recv(2047).decode()                     # resp STOR
-        print(stor_rep, end='')       
-        
+        print(stor_rep, end='')
 
-        connection_socket, ser_addr = client_data_socket.accept()      # wait 3 way hand shake from server
+        if stor_rep[0:3] == "150":
+            
+            connection_socket, ser_addr = client_data_socket.accept()      # wait 3 way hand shake from server
 
-        # if data_socket_status == True:      # if after create data socket -> send data
+            if data_socket_status == True:      # if after create data socket -> send data
 
-        #     connection_socket.send(data_export.encode())
-        #     data_export_lenght = len(data_export)
-        #     connection_socket.close()
+                connection_socket.send(data_export.encode())
+                data_export_lenght = len(data_export)
+                connection_socket.close()
 
-        #     cmd_rep_2 = client_command_socket.recv(2047).decode()
-        #     print(cmd_rep_2, end=f'ftp> {data_export_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
+                cmd_rep_2 = client_command_socket.recv(2047).decode()
+                print(cmd_rep_2, end=f'ftp> {data_export_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
 
 
     elif command == "rename":
