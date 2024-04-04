@@ -50,7 +50,13 @@ while True:
         break
     
     elif command == "cd":
-        pass
+        try:
+            input_path = user_input[1]
+        except IndexError:              # case user didn't type "path"
+            input_path = input("Remote directory ")
+        
+        send_recv_print_cmd(f"CWD {input_path}\r\n")
+
 
     elif command == "close":        #close session and return to FTP
         if connect_status == True:
@@ -86,7 +92,13 @@ while True:
             server_command_port = 21
         else:
             server_command_port = 21
-        client_command_socket.connect((user_input[1], server_command_port))
+
+        try:
+            client_command_socket.connect((user_input[1], server_command_port))
+        except gaierror:
+            print(f"Unknow host {user_input[1]}.")
+            continue
+
         connection_response_message = client_command_socket.recv(2047).decode()
         print(connection_response_message, end='')
 
@@ -191,17 +203,24 @@ while True:
                     cmd_rep_2 = client_command_socket.recv(2047).decode()
                     print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
 
-                    f = open(user_input[1], "w")
+                    try:
+                        filename = user_input[2]
+                    except IndexError:
+                        filename = user_input[1]
+                    f = open(filename, "w")
                     f.write(data_income)
                     f.close()
                 else:
                     connection_socket.close()
 
-
-
-
         else:
             print('Not connected.')
+
+
+    elif command == "pwd":
+        send_recv_print_cmd("XPWD\r\n")
+
+
 
                 
 
@@ -215,13 +234,7 @@ while True:
             
 
 
-    
-    elif command == "disconnect":
-        client_command_socket.close()
-        client_data_socket.close()
-        connect_status = False
-        data_socket_status = False
-        
+
 
 
 
