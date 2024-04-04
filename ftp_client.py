@@ -142,8 +142,6 @@ while True:
             connection_socket, ser_addr  = client_data_socket.accept()      # wait 3 way hand shake from server
 
 
-
-
             if resp.split(' ')[0] == "200":     # if after send port and 200 PORT OK
                 data_socket_status = True
 
@@ -155,14 +153,23 @@ while True:
                 except IndexError:
                     client_command_socket.send("NLST\r\n".encode())
                 
-                cmd_rep = client_command_socket.recv(2047).decode()
-                print(cmd_rep, end='')
-                data_income = connection_socket.recv(2047).decode()
-                data_income_lenght = len(data_income)
-                connection_socket.close()
-                cmd_rep_2 = client_command_socket.recv(2047).decode()
-                print(data_income, end="")
-                print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
+                cmd_rep = client_command_socket.recv(2047).decode()     # get recv response from ls command
+                print(cmd_rep, end='')                                  # print ls command response
+                data_income = connection_socket.recv(2047).decode()     # recv data
+                data_income_lenght = len(data_income)                   # count data byte
+                connection_socket.close()                               # close actual_data_socket
+                cmd_rep_2 = client_command_socket.recv(2047).decode()   # recv respone "226 Transfer complete"
+
+                try:                                    # case user type [local file]
+                    local_file = user_input[2]
+                    f = open(local_file, "w", newline='')
+                    f.write(data_income)
+                    f.close()
+                    
+                except IndexError:                       # case user didn't type [local file]
+                    print(data_income, end="")                              #print data
+                    
+                print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n') #print statistic
 
 
 
@@ -209,7 +216,7 @@ while True:
                         filename = user_input[2]
                     except IndexError:
                         filename = user_input[1]
-                    f = open(filename, "w")
+                    f = open(filename, "w", newline='')
                     f.write(data_income)
                     f.close()
                 else:
