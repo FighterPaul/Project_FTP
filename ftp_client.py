@@ -17,7 +17,6 @@ def send_recv_print_cmd(cmd: str):
 
 
 
-
 while True:
 
     user_input = input("ftp> ").strip()
@@ -26,8 +25,57 @@ while True:
     command = user_input[0]
 
     if command == "quit":
+        if connect_status == True:
+            resp = send_recv_print_cmd("QUIT\r\n")
+            if resp == "221 Closing session.\r\n":
+                client_command_socket.close()
+        else:
+            pass
+        break
+
+
+    elif command == "ascii":
+        send_recv_print_cmd("TYPE A\r\n")
+    
+    elif command == "binary":
+        send_recv_print_cmd("TYPE I\r\n")
+
+    elif command == "bye":
+        if connect_status == True:
+            resp = send_recv_print_cmd("QUIT\r\n")
+            if resp == "221 Closing session.\r\n":
+                client_command_socket.close()
+        else:
+            pass
         break
     
+    elif command == "cd":
+        pass
+
+    elif command == "close":        #close session and return to FTP
+        if connect_status == True:
+            resp = send_recv_print_cmd("QUIT\r\n")
+            if resp == "221 Closing session.\r\n":
+                client_command_socket.close()
+                pass
+        else:
+            print("Not connected.")
+        
+
+    elif command == "delete":
+        pass
+
+    elif command == "disconnect":    #close session and return to FTP
+        if connect_status == True:
+            resp = send_recv_print_cmd("QUIT\r\n")
+            if resp == "221 Closing session.\r\n":
+                client_command_socket.close()
+                pass
+        else:
+            print("Not connected.")
+        
+
+
     elif command == "open":     # open [ip] [port]
         #create tcp socket
         client_command_socket = socket(AF_INET, SOCK_STREAM)
