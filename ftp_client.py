@@ -139,7 +139,7 @@ while True:
                         pass
                     elif resp[0:3] == "530":    # 530 Authentication rejected 
                         print("Login failed.") 
-                        
+
                 elif resp[0:3] == "501":    # 501 User name not specified
                     print("Login failed.") 
 
@@ -200,7 +200,7 @@ while True:
             connection_socket, ser_addr  = client_data_socket.accept()      # wait 3 way hand shake from server
 
 
-            if resp.split(' ')[0] == "200":     # if after send port and 200 PORT OK
+            if resp[0:3] == "200":     # if after send port and 200 PORT OK
                 data_socket_status = True
 
 
@@ -255,7 +255,7 @@ while True:
 
 
 
-            if resp.split(' ')[0] == "200":     # if after send port and 200 PORT OK
+            if resp[0:3] == "200":     # if after send port and 200 PORT OK
                 data_socket_status = True
 
 
@@ -282,6 +282,55 @@ while True:
 
         else:
             print('Not connected.')
+
+    elif command == "put":
+
+        try:                                    # get local_file
+            local_file = user_input[1]
+        except IndexError:
+            local_file = input("Local file ")
+
+        try:                                    # check local_file
+            f = open(local_file, "r")
+            data_export = f.read()
+            f.close()
+        except OSError:
+            print(f"{local_file}: File not found")
+            continue
+
+
+        client_data_socket = socket(AF_INET, SOCK_STREAM)        # create data socket
+        client_data_socket.bind(('', 0))
+        client_data_socket.listen(10)
+        #make PORT command
+        data_socket_info = client_data_socket.getsockname()     # get ([ip], port)
+        fragment_current_ip = current_ip_address.split('.')
+        client_data_socket_port = int(data_socket_info[1])
+        port_command = f"PORT {fragment_current_ip[0]},{fragment_current_ip[1]},{fragment_current_ip[2]},{fragment_current_ip[3]},{client_data_socket_port // 256},{client_data_socket_port % 256}\r\n"
+        resp = send_recv_print_cmd(port_command)                # send data socket port to server
+        if resp[0:3] == "200":     # if after send port and 200 PORT OK
+            data_socket_status = True
+
+        try:
+            remote_file = user_input[2]
+        except IndexError:
+            remote_file = user_input[1]
+        client_command_socket.send(f"STOR {remote_file}\r\n".encode())          # send command STOR 
+        stor_rep = client_command_socket.recv(2047).decode()                     # resp STOR
+        print(stor_rep, end='')       
+        
+
+        connection_socket, ser_addr = client_data_socket.accept()      # wait 3 way hand shake from server
+
+        # if data_socket_status == True:      # if after create data socket -> send data
+
+        #     connection_socket.send(data_export.encode())
+        #     data_export_lenght = len(data_export)
+        #     connection_socket.close()
+
+        #     cmd_rep_2 = client_command_socket.recv(2047).decode()
+        #     print(cmd_rep_2, end=f'ftp> {data_export_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
+
 
 
     elif command == "pwd":
