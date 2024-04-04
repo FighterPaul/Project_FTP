@@ -77,7 +77,13 @@ while True:
         
 
     elif command == "delete":
-        pass
+        remote_file = ""
+        try:
+            remote_file = user_input[1]
+        except IndexError:
+            remote_file = input("Remote file ")
+
+        send_recv_print_cmd(f"DELE {remote_file}\r\n")
 
     elif command == "disconnect":    #close session and return to FTP
         if connect_status == True:
@@ -197,7 +203,6 @@ while True:
             port_command = f"PORT {fragment_current_ip[0]},{fragment_current_ip[1]},{fragment_current_ip[2]},{fragment_current_ip[3]},{client_data_socket_port // 256},{client_data_socket_port % 256}\r\n"
             
             resp = send_recv_print_cmd(port_command)                # send data socket port to server
-            connection_socket, ser_addr  = client_data_socket.accept()      # wait 3 way hand shake from server
 
 
             if resp[0:3] == "200":     # if after send port and 200 PORT OK
@@ -205,12 +210,14 @@ while True:
 
 
             if data_socket_status == True:      # if after create data socket
+                input_path = ""
                 try:
                     input_path = user_input[1]
-                    client_command_socket.send(f"NLST {input_path}\r\n".encode())
                 except IndexError:
-                    client_command_socket.send("NLST\r\n".encode())
-                
+                    input_path = ""
+
+                client_command_socket.send(f"NLST {input_path}\r\n".encode())
+                connection_socket, ser_addr = client_data_socket.accept()      # wait 3 way hand shake from server
                 cmd_rep = client_command_socket.recv(2047).decode()     # get recv response from ls command
                 print(cmd_rep, end='')                                  # print ls command response
                 data_income = connection_socket.recv(2047).decode()     # recv data
@@ -331,6 +338,23 @@ while True:
         #     cmd_rep_2 = client_command_socket.recv(2047).decode()
         #     print(cmd_rep_2, end=f'ftp> {data_export_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
 
+
+    elif command == "rename":
+        try:
+            old_name = user_input[1]
+        except IndexError:
+            old_name = input("From name ")
+
+        try:
+            new_name = user_input[2]
+        except IndexError:
+            new_name = input("To name ")
+
+        RNFR_resp = send_recv_print_cmd(f"RNFR {old_name}\r\n")
+        if RNFR_resp[0:3] == "550":
+            continue
+        else:
+            send_recv_print_cmd(f"RNTO {new_name}\r\n")
 
 
     elif command == "pwd":
