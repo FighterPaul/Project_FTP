@@ -68,7 +68,7 @@ while True:
         # if connection is established then give a new port number to ftp server for make data connection
         if connect_status == True:
             client_data_socket = socket(AF_INET, SOCK_STREAM)        # create data socket
-            client_data_socket.bind(('', 20000))
+            client_data_socket.bind(('', 0))
             client_data_socket.listen(1)
 
 
@@ -93,7 +93,11 @@ while True:
                 cmd_rep = client_command_socket.recv(2047).decode()
                 print(cmd_rep, end='')
                 data_income = connection_socket.recv(2047).decode()
-                print(data_income)
+                data_income_lenght = len(data_income)
+                connection_socket.close()
+                cmd_rep_2 = client_command_socket.recv(2047).decode()
+                print(data_income, end="")
+                print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
 
                 
 
@@ -102,6 +106,57 @@ while True:
 
         else:
             print('Not connected.')
+
+
+    elif command == "get":
+
+        if connect_status == True:
+            client_data_socket = socket(AF_INET, SOCK_STREAM)        # create data socket
+            client_data_socket.bind(('', 0))
+            client_data_socket.listen(1)
+
+
+            #make PORT command
+            data_socket_info = client_data_socket.getsockname()     # get ([ip], port)
+            fragment_current_ip = current_ip_address.split('.')
+            client_data_socket_port = int(data_socket_info[1])
+            port_command = f"PORT {fragment_current_ip[0]},{fragment_current_ip[1]},{fragment_current_ip[2]},{fragment_current_ip[3]},{client_data_socket_port // 256},{client_data_socket_port % 256}\r\n"
+            
+            resp = send_recv_print_cmd(port_command)                # send data socket port to server
+            connection_socket, ser_addr  = client_data_socket.accept()      # wait 3 way hand shake from server
+
+
+
+
+            if resp.split(' ')[0] == "200":     # if after send port and 200 PORT OK
+                data_socket_status = True
+
+
+            if data_socket_status == True:      # if after create data socket
+                client_command_socket.send(f"RETR {user_input[1]}\r\n".encode())
+                cmd_rep = client_command_socket.recv(2047).decode()
+                print(cmd_rep, end='')
+                if cmd_rep != "550 No such file.\r\n":
+                    data_income = connection_socket.recv(2047).decode()
+                    data_income_lenght = len(data_income)
+                    connection_socket.close()
+                    cmd_rep_2 = client_command_socket.recv(2047).decode()
+                    print(cmd_rep_2, end=f'ftp> {data_income_lenght} bytes received in 0.00Seconds 10.00Kbytes/sec.\n')
+
+                    f = open(user_input[1], "w")
+                    f.write(data_income)
+                    f.close()
+                else:
+                    connection_socket.close()
+
+
+
+
+        else:
+            print('Not connected.')
+
+                
+
 
 
         
